@@ -99,7 +99,7 @@ services:
       DAGSTER_POSTGRES_DB: dagster
       DAGSTER_POSTGRES_HOST: postgres
       DAGSTER_POSTGRES_PORT: 5432
-      MINIO_ENDPOINT: minio:9000
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       MLFLOW_TRACKING_URI: http://mlflow:5000
@@ -109,6 +109,7 @@ services:
       - ../config:/opt/dagster/app/config
       - ../scripts:/opt/dagster/app/scripts
       - ../src:/opt/dagster/app/src
+      - ../data:/opt/dagster/app/data
     command: dagster-daemon run -w /opt/dagster/dagster_home/workspace.yaml
     depends_on:
       postgres:
@@ -132,7 +133,7 @@ services:
       DAGSTER_POSTGRES_DB: dagster
       DAGSTER_POSTGRES_HOST: postgres
       DAGSTER_POSTGRES_PORT: 5432
-      MINIO_ENDPOINT: minio:9000
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       MLFLOW_TRACKING_URI: http://mlflow:5000
@@ -142,6 +143,7 @@ services:
       - ../config:/opt/dagster/app/config
       - ../scripts:/opt/dagster/app/scripts
       - ../src:/opt/dagster/app/src
+      - ../data:/opt/dagster/app/data
     command: dagster-webserver -h 0.0.0.0 -p 3000 -w /opt/dagster/dagster_home/workspace.yaml
     depends_on:
       postgres:
