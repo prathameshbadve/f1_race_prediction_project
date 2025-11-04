@@ -10,3 +10,5 @@ notebooks/
 
 *.pyc
 _pycache__
+
+data/external
