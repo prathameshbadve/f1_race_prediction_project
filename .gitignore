@@ -1,2 +1,7 @@
 .venv
 .env
+
+.logs_queue
+.nux
+logs
+storage
