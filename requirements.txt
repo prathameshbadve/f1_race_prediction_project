@@ -1,0 +1,44 @@
+# Base
+python-dotenv==1.1.1
+pandas==2.3.3
+
+# Notebooks
+ipykernel==7.0.0
+
+# S3/MinIO Bucket Storage
+minio==7.2.18
+boto3==1.40.55
+
+# Postgres & DB
+psycopg2-binary==2.9.11
+
+# Redis cache
+redis==7.0.0
+
+# FastF1
+fastf1==3.6.1
+
+# Orchestration
+dagster==1.5.13
+dagster-webserver==1.5.13
+dagster-postgres==0.21.13
+
+# ML
+mlflow==3.5.1
+
+# Testing
+pytest==8.4.2
+pytest-asyncio==1.2.0
+pytest-benchmark==5.1.0
+pytest-cov==7.0.0
+pytest-mock==3.15.1
+
+# Code quality
+black==25.9.0
+ruff==0.14.0
+mypy==1.18.2
+mypy_extensions==1.1.0
+pylint==4.0.0
+
+# Coverage reporting
+coverage[toml]>=7.2.7
