@@ -5,3 +5,8 @@
 .nux
 logs
 storage
+
+notebooks/
+
+.pyc
+_pycache__
