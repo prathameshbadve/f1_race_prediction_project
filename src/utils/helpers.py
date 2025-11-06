@@ -20,7 +20,7 @@ def get_project_root():
             return parent
 
 
-def ensure_directory(path: Path) -> None:
+def ensure_directory(path: Path | str) -> None:
     """
     Ensure that a directory exists; if not, create it.
 
@@ -30,6 +30,9 @@ def ensure_directory(path: Path) -> None:
     Returns:
         path (Path): The ensured directory path.
     """
+
+    if type(path) is str:
+        path = Path(path)
 
     Path(path).mkdir(parents=True, exist_ok=True)
     logger.debug("Directory ensured: %s", path)
