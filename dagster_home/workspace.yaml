@@ -1,0 +1,7 @@
+# Dagster workspace configuration
+
+load_from:
+  - python_package:
+      package_name: dagster_code
+      working_directory: /opt/dagster/app
+      attribute: defs

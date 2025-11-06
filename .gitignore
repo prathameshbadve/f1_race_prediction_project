@@ -1,2 +1,14 @@
 .venv
 .env
+
+.logs_queue
+.nux
+logs
+storage
+
+notebooks/
+
+*.pyc
+_pycache__
+
+data/external
