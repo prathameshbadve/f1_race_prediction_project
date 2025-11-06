@@ -32,6 +32,11 @@ RUN mkdir -p /opt/dagster/dagster_home
 # Set environment variable for Dagster home
 ENV DAGSTER_HOME=/opt/dagster/dagster_home
 
+# Logging directory
+RUN mkdir -p /opt/dagster/dagster_home/monitoring/logs \
+    chmod 755 /opt/dagster/dagster_home/monitoring/logs
+
+
 # Expose Dagster webserver port
 EXPOSE 3000
 

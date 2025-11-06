@@ -25,13 +25,6 @@ run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
 
-# Compute logs configuration
-compute_logs:
-  module: dagster.core.storage.local_compute_log_manager
-  class: LocalComputeLogManager
-  config:
-    base_dir: /opt/dagster/dagster_home/logs
-
 # Code server configuration
 code_servers:
   local_startup_timeout: 180
@@ -51,3 +44,35 @@ retention:
 sensors:
   use_threads: true
   num_workers: 4
+
+# Python logging
+python_logs:
+  managed_python_loggers:
+    - "" # Capture the root logger (recommended)
+    - config.logging # Capture your custom logging setup module
+
+  # Set the default log level for captured Python loggers
+  python_log_level: INFO
+
+  # Add handlers and formatters — these will be attached by Dagster
+  # They *supplement* your existing handlers from logging.py
+  dagster_handler_config:
+    handlers:
+      console:
+        class: logging.StreamHandler
+        level: INFO
+        formatter: dagster
+        stream: ext://sys.stdout
+
+      file_handler:
+        class: logging.handlers.RotatingFileHandler
+        filename: /opt/dagster/dagster_home/monitoring/logs/dagster_combined.log
+        maxBytes: 10485760 # 10 MB per file
+        backupCount: 5
+        level: INFO
+        formatter: dagster
+
+    formatters:
+      dagster:
+        format: "%(asctime)s - [%(levelname)-8s] - %(name)-30s - [%(funcName)s:%(lineno)d] - %(message)s"
+        datefmt: "%Y-%m-%d %H:%M:%S"

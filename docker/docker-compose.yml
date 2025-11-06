@@ -6,9 +6,8 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    env_file:
+      - .env
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -44,10 +43,9 @@ services:
     container_name: f1-postgres
     ports:
       - "5432:5432"
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_INITDB_ARGS: "-E UTF8"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -68,11 +66,8 @@ services:
     container_name: f1-mlflow
     ports:
       - "5001:5000"
-    environment:
-      MLFLOW_BACKEND_STORE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/f1_mlflow
-      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
-      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
-      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+    env_file:
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,6 +88,8 @@ services:
       context: ./Dockerfiles
       dockerfile: Dockerfile.dagster
     container_name: f1-dagster-daemon
+    env_file:
+      - .env
     environment:
       DAGSTER_POSTGRES_USER: ${POSTGRES_USER}
       DAGSTER_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -110,6 +107,7 @@ services:
       - ../scripts:/opt/dagster/app/scripts
       - ../src:/opt/dagster/app/src
       - ../data:/opt/dagster/app/data
+      - ../pyproject.toml:/opt/dagster/app/pyptoject.toml
     command: dagster-daemon run -w /opt/dagster/dagster_home/workspace.yaml
     depends_on:
       postgres:
@@ -127,6 +125,8 @@ services:
     container_name: f1-dagster-webserver
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       DAGSTER_POSTGRES_USER: ${POSTGRES_USER}
       DAGSTER_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -144,6 +144,7 @@ services:
       - ../scripts:/opt/dagster/app/scripts
       - ../src:/opt/dagster/app/src
       - ../data:/opt/dagster/app/data
+      - ../pyproject.toml:/opt/dagster/app/pyptoject.toml
     command: dagster-webserver -h 0.0.0.0 -p 3000 -w /opt/dagster/dagster_home/workspace.yaml
     depends_on:
       postgres:
