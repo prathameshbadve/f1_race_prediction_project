@@ -2,9 +2,13 @@
 Dagster assets for ingestion from FastF1 API
 """
 
-from dagster import asset, Config, AssetExecutionContext, Output
+from dagster import asset, Config, Output
 from dagster_code.resources.fastf1_resource import FastF1Resource
 from dagster_code.resources.s3_resource import S3Resource
+
+from config.logging import get_logger
+
+_logger = get_logger("data_ingestion.test_ingestion")
 
 
 class F1SessionConfig(Config):
@@ -17,7 +21,6 @@ class F1SessionConfig(Config):
 
 @asset(compute_kind="fastf1")
 def f1_session_results(
-    context: AssetExecutionContext,
     config: F1SessionConfig,
     fastf1_resource: FastF1Resource,
     s3_resource: S3Resource,
@@ -29,8 +32,11 @@ def f1_session_results(
     """
 
     # Load session
-    context.log.info(
-        f"Loading session: {config.year} {config.grand_prix_name} {config.session_name}"
+    _logger.info(
+        "Loading session: %d %s %s",
+        config.year,
+        config.grand_prix_name,
+        config.session_name,
     )
     session = fastf1_resource.get_session(
         config.year, config.grand_prix_name, config.session_name
@@ -57,15 +63,10 @@ def f1_session_results(
         df=results,
     )
 
-    context.log.info(f"Uploaded {len(results)} results to s3://f1-data-raw/{s3_key}")
-    context.add_output_metadata(
-        {
-            "num_drivers": len(results),
-            "s3_path": f"s3://f1-data-raw/{s3_key}",
-            "year": config.year,
-            "grand_prix": config.grand_prix_name,
-            "session": config.session_name,
-        }
+    _logger.info(
+        "Uploaded %d results to s3://f1-data-raw/%s",
+        len(results),
+        s3_key,
     )
 
     metadata = {
