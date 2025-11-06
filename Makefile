@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs clean ps status minio-console mlflow dagster postgres-cli
+.PHONY: help build-services start-services stop-services restart-services logs clean ps status minio-console mlflow dagster postgres-cli clear-logs
 
 # Default target
 help:
@@ -138,3 +138,9 @@ stats:
 create-buckets:
 	@echo "Creating MinIO buckets..."
 	docker-compose -f docker/docker-compose.yml run --rm minio-setup
+
+# Clear dagster logs
+clear-logs:
+	@echo "🧹 Clearing Dagster logs in container..."
+	docker exec -it f1-dagster-webserver sh -c "rm -rf /opt/dagster/dagster_home/monitoring/logs/*"
+	@echo "✅ Logs cleared inside Dagster container."
