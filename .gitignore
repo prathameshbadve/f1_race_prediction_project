@@ -9,6 +9,9 @@ storage
 notebooks/
 
 *.pyc
-_pycache__
+_pycache__/*
 
 data/external
+
+.benchmarks
+.pytest_cache
