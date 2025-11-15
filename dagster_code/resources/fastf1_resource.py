@@ -405,6 +405,7 @@ class FastF1Resource(ConfigurableResource):
         """
 
         session_object = self._get_session(year, event, session)
+        session_object.load(laps=True, weather=False, messages=False, telemetry=False)
 
         session_info = {
             "event_name": [
