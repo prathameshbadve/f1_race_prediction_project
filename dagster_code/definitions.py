@@ -13,6 +13,13 @@ from dagster_code.assets import (
     f1_session_status_configurable,
     f1_session_session_info_configurable,
     f1_raw_schedule_validation,
+    f1_raw_results_validation,
+    f1_raw_laps_validation,
+    f1_raw_messages_validation,
+    f1_raw_weather_validation,
+    f1_raw_track_status_validation,
+    f1_raw_session_status_validation,
+    f1_raw_session_info_validation,
 )
 from dagster_code.jobs import (
     f1_laps_ingestion_job,
@@ -47,6 +54,13 @@ defs = Definitions(
         f1_session_status_configurable,
         f1_session_session_info_configurable,
         f1_raw_schedule_validation,
+        f1_raw_results_validation,
+        f1_raw_laps_validation,
+        f1_raw_messages_validation,
+        f1_raw_weather_validation,
+        f1_raw_track_status_validation,
+        f1_raw_session_status_validation,
+        f1_raw_session_info_validation,
     ],
     jobs=[
         f1_laps_ingestion_job,
