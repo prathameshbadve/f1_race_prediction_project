@@ -5,9 +5,10 @@ Provides validation models for season schedules, race results, qualifying result
 and weather data to ensure data quality before processing.
 """
 
+import math
 from typing import Optional, List
 from enum import Enum
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
 import pandas as pd
 
@@ -140,13 +141,11 @@ class RaceResultsSchema(BaseModel):
     LastName: str = Field(..., description="Driver last name")
     FullName: str = Field(..., description="Driver full name")
     HeadshotUrl: str = Field(..., description="URL of Driver headshot")
-    CountryCode: str = Field(
-        ..., min_length=3, max_length=3, description="3-letter driver country code"
-    )
+    CountryCode: str | None = None
     Position: float = Field(
         ...,
         ge=1.0,
-        le=20.0,
+        le=22.0,
         description="Position at which the driver crossed the finishing line",
     )
     ClassifiedPosition: str = Field(
@@ -165,6 +164,36 @@ class RaceResultsSchema(BaseModel):
     EventName: str = Field(..., description="Event name")
     SessionName: str = Field(..., description="Session name")
     SessionDate: pd.Timestamp = Field(..., description="Date of event session")
+
+    @field_validator("Position", mode="before")
+    @classmethod
+    def nan_to_none(cls, v):
+        """Ensure that float("nan") is changed to None"""
+
+        if isinstance(v, float) and math.isnan(v):
+            return None
+        return v
+
+    @model_validator(mode="after")
+    def validate_position_for_status(self):
+        """
+        Validate position as per status.
+        Allow nan if Position is Withdrew
+        """
+
+        if self.Status == "Withdrew":
+            if self.Position is None:
+                return self
+            if isinstance(self.Position, float) and math.isnan(self.Position):
+                return self
+            # Otherwise it's some other value — treat normally
+            return self
+
+        # If Status is NOT "Withdrew", NaN is not allowed
+        if isinstance(self.Position, float) and math.isnan(self.Position):
+            raise ValueError("Position cannot be NaN unless Status is 'Withdrew'.")
+
+        return self
 
     @field_validator("Abbreviation")
     @classmethod
@@ -218,13 +247,11 @@ class QualifyingResultSchema(BaseModel):
     LastName: str = Field(..., description="Driver last name")
     FullName: str = Field(..., description="Driver full name")
     HeadshotUrl: str = Field(..., description="URL of Driver headshot")
-    CountryCode: str = Field(
-        ..., min_length=3, max_length=3, description="3-letter driver country code"
-    )
-    Position: float = Field(
+    CountryCode: str | None = None
+    Position: float | None = Field(
         ...,
         ge=1.0,
-        le=20.0,
+        le=22.0,
         description="Position at which the driver crossed the finishing line",
     )
     ClassifiedPosition: Optional[str] = ""
@@ -239,6 +266,15 @@ class QualifyingResultSchema(BaseModel):
     EventName: str = Field(..., description="Event name")
     SessionName: str = Field(..., description="Session name")
     SessionDate: pd.Timestamp = Field(..., description="Date of event session")
+
+    @field_validator("Position", mode="before")
+    @classmethod
+    def nan_to_none(cls, v):
+        """Ensure that float("nan") is changed to None"""
+
+        if isinstance(v, float) and math.isnan(v):
+            return None
+        return v
 
     @field_validator("Abbreviation")
     @classmethod
@@ -300,7 +336,7 @@ class LapsSchema(BaseModel):
         ..., min_length=3, max_length=3, description="3-letter driver code"
     )
     DriverNumber: str = Field(..., description="Driver number as string")
-    LapTime: pd.Timedelta = Field(..., description="Recorded lap time")
+    LapTime: Optional[pd.Timedelta] = Field(None, description="Recorded lap time")
     LapNumber: float = Field(..., ge=1, description="Recorded lap number")
     Stint: float = Field(..., description="Stint number")
     PitOutTime: Optional[pd.Timedelta] = Field(
@@ -335,12 +371,9 @@ class LapsSchema(BaseModel):
     SpeedST: Optional[float] = Field(
         None, description="Speedtrap on longest straight (Not sure) [km/h]"
     )
-    IsPersonalBest: bool = Field(
-        ...,
-        description="Flag to indicate if the lap was the driver's personal best time",
-    )
-    Compound: TyreCompounds = Field(..., description="Tyre compound")
-    TyreLife: Optional[int] = Field(None, ge=0, le=60, description="Tyre age in laps")
+    IsPersonalBest: bool | None = None
+    Compound: TyreCompounds | None = None
+    TyreLife: Optional[int] = Field(None, description="Tyre age in laps")
     FreshTyre: Optional[bool] = Field(None, description="Whether tyre is fresh")
     Team: str = Field(..., description="Team name")
     LapStartTime: pd.Timedelta = Field(
@@ -353,9 +386,7 @@ class LapsSchema(BaseModel):
     Position: Optional[float] = Field(
         None, description="Position of the driver at the end of the lap"
     )
-    Deleted: bool = Field(
-        ..., description="Flag to indicate if the lap time was deleted"
-    )
+    Deleted: bool | None = None
     DeletedReason: Optional[str] = Field(
         "", description="Reason for lap deletion if deleted"
     )
@@ -367,17 +398,38 @@ class LapsSchema(BaseModel):
         description="Indicates that the lap start and end time "
         "are synced correctly with other laps",
     )
+    LapTimeSeconds: float | None = None
 
     # Metadata
     EventName: str = Field(..., description="Event name")
     SessionName: str = Field(..., description="Session name")
     SessionDate: pd.Timestamp = Field(..., description="Date of event session")
 
+    @field_validator("Compound", mode="before")
+    @classmethod
+    def convert_nan_string(cls, v):
+        """Convert the nan string to None object"""
+
+        if v in ["nan", "None"]:
+            return None
+        return v
+
+    @field_validator("TyreLife", mode="before")
+    @classmethod
+    def nan_to_none(cls, v):
+        """Ensure that float("nan") is changed to None"""
+
+        if isinstance(v, float) and math.isnan(v):
+            return None
+        return v
+
     @field_validator("LapTime")
     @classmethod
     def validate_lap_time(cls, v: pd.Timedelta) -> pd.Timedelta:
         """Ensure lap time is reasonable"""
 
+        if v is None:
+            return v
         # Reasonable lap time: between 1 minute and 3 minutes
         if v.total_seconds() < 60 or v.total_seconds() > 300:
             _logger.warning("Unusual lap time: %s seconds", v.total_seconds())
@@ -393,17 +445,17 @@ class WeatherSchema(BaseModel):
     AirTemp: float = Field(..., ge=-10, le=60, description="Air temperature in Celcius")
     Humidity: float = Field(..., ge=0, le=100, description="Humidity")
     Pressure: float = Field(
-        ..., ge=900, le=1100, description="Atmospheric pressure at the track in mbar"
+        ..., ge=650, le=1100, description="Atmospheric pressure at the track in mbar"
     )
     Rainfall: bool = Field(..., description="Whether it is raining?")
     TrackTemp: float = Field(
         ..., ge=-10, le=80, description="Track temperature in Celsius"
     )
-    WindDirection: Optional[float] = Field(
-        None, ge=0, le=50, description="Wind speed in m/s"
-    )
     WindDirection: Optional[int] = Field(
-        None, ge=0, le=360, description="Wind direction in degrees"
+        None, ge=-360, le=360, description="Wind direction in degrees"
+    )
+    WindSpeed: Optional[float] = Field(
+        None, ge=0, le=50, description="Wind speed in m/s"
     )
 
     # Metadata
@@ -475,14 +527,14 @@ class RaceControlMessagesSchema(BaseModel):
     Scope: Optional[str] = Field(
         None, description="Scope of the message - driver, track, etc."
     )
-    Sector: Optional[str] = Field(
+    Sector: float | None = Field(
         None, description="Sector for which the message is relevant"
     )
     RacingNumber: Optional[str] = Field(
         None,
         description="Racing number of the driver if message is in scope of the driver",
     )
-    Lap: int = Field(..., description="Lap when the message was released")
+    Lap: float | None = Field(None, description="Lap when the message was released")
 
     # Metadata
     EventName: str = Field(..., description="Event name")
@@ -521,6 +573,29 @@ class TrackStatusSchema(BaseModel):
     SessionDate: pd.Timestamp = Field(..., description="Date of event session")
 
 
+class SessionInfoSchema(BaseModel):
+    """Schema for Session Info"""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    event_name: str = Field(..., description="Event Name")
+    location: str = Field(..., description="Location hosting the grand prix")
+    country: str = Field(..., description="Country hosting the event")
+    session_name: str = Field(..., description="Session name")
+    session_date: pd.Timestamp = Field(..., description="Session date")
+    total_laps: int | None = Field(..., description="Total number of laps")
+    event_format: EventFormats = Field(..., description="Format of the event")
+    round_number: int = Field(..., description="Round number in the season")
+    official_event_name: str = Field(
+        ..., description="Official name of the event including sponsor name"
+    )
+    session_1: Session1Names = Field(..., description="Session 1 Name")
+    session_2: Session2Names = Field(..., description="Session 2 Name")
+    session_3: Session3Names = Field(..., description="Session 3 Name")
+    session_4: Session4Names = Field(..., description="Session 4 Name")
+    session_5: Session5Names = Field(..., description="Session 5 Name")
+
+
 class DataValidator:
     """
     Validates DataFrames against Pydantic schemas.
@@ -540,6 +615,74 @@ class DataValidator:
         """Validate the season schedule"""
 
         return self._validate_dataframe(df, SeasonScheduleSchema, raise_on_error)
+
+    def validate_results(
+        self,
+        session: str,
+        df: pd.DataFrame,
+        raise_on_error: bool = False,
+    ) -> tuple[pd.DataFrame, List[str]]:
+        """Validate session results"""
+
+        if session in ["Race", "Sprint"]:
+            return self._validate_dataframe(df, RaceResultsSchema, raise_on_error)
+
+        if session in ["Qualifying", "Sprint Qualifying", "Sprint Shootout"]:
+            return self._validate_dataframe(df, QualifyingResultSchema, raise_on_error)
+
+    def validate_laps(
+        self,
+        df: pd.DataFrame,
+        raise_on_error: bool = False,
+    ) -> tuple[pd.DataFrame, List[str]]:
+        """Validate session laps"""
+
+        return self._validate_dataframe(df, LapsSchema, raise_on_error)
+
+    def validate_weather(
+        self,
+        df: pd.DataFrame,
+        raise_on_error: bool = False,
+    ) -> tuple[pd.DataFrame, List[str]]:
+        """Validate weather data"""
+
+        return self._validate_dataframe(df, WeatherSchema, raise_on_error)
+
+    def validate_race_control_messages(
+        self,
+        df: pd.DataFrame,
+        raise_on_error: bool = False,
+    ) -> tuple[pd.DataFrame, List[str]]:
+        """Validate race control messages data"""
+
+        return self._validate_dataframe(df, RaceControlMessagesSchema, raise_on_error)
+
+    def validate_track_status(
+        self,
+        df: pd.DataFrame,
+        raise_on_error: bool = False,
+    ) -> tuple[pd.DataFrame, List[str]]:
+        """Validate track status data"""
+
+        return self._validate_dataframe(df, TrackStatusSchema, raise_on_error)
+
+    def validate_session_status(
+        self,
+        df: pd.DataFrame,
+        raise_on_error: bool = False,
+    ) -> tuple[pd.DataFrame, List[str]]:
+        """Validate session status data"""
+
+        return self._validate_dataframe(df, SessionStatusSchema, raise_on_error)
+
+    def validate_session_info(
+        self,
+        df: pd.DataFrame,
+        raise_on_error: bool = False,
+    ) -> tuple[pd.DataFrame, List[str]]:
+        """Validate session info data"""
+
+        return self._validate_dataframe(df, SessionInfoSchema, raise_on_error)
 
     def _validate_dataframe(
         self,
