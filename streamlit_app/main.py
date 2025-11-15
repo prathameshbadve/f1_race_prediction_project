@@ -48,48 +48,72 @@ with c3:
         options=session_names,
     )
 
-object_key = (
-    f"{year_selection}/{grand_prix_selection}/{session_selection}/results.parquet"
-)
-results_df = storage_client.download_dataframe(bucket="raw", key=object_key)
-results_df = results_df[
-    [
-        "FullName",
-        "DriverNumber",
-        "Abbreviation",
-        "TeamName",
-        "TeamColor",
-        "ClassifiedPosition",
-        "Status",
-        "Points",
-    ]
-]
-
-st.dataframe(results_df, hide_index=True)
-
-st.write("Lap by lap position changes.")
+st.write("- Results visualization")
+st.write("- Lap by lap position changes")
+st.write("- Tyre strategies used")
 
 st.write("---")
 
 st.title("Data Validation Summary")
 
-data_type_selection = st.selectbox(
-    label="Choose data type",
-    options=[
-        "Season Schedule",
-        "Results",
-        "Laps",
-        "Weather",
-        "Race Control Messages",
-        "Track Status",
-        "Session Status",
-        "Session Info",
-    ],
+c4, c5 = st.columns(
+    spec=[1, 1],
+    gap="small",
+    vertical_alignment="center",
+    border=True,
 )
 
-schedule_validation_result_keys = storage_client.list_files(
+
+def format_data_type(chosen_type):
+    """Format data type and return value to display"""
+
+    formatted_values = {
+        "season_schedule": "Season Schedule",
+        "results": "Results",
+        "laps": "Laps",
+        "weather": "Weather",
+        "messages": "Race Control Messages",
+        "track_status": "Track Status",
+        "session_status": "Session Status",
+        "session_info": "Session Info",
+    }
+
+    return formatted_values[chosen_type]
+
+
+with c4:
+    data_type_selection = st.selectbox(
+        label="Choose data type",
+        options=[
+            "season_schedule",
+            "results",
+            "laps",
+            "weather",
+            "messages",
+            "track_status",
+            "session_status",
+            "session_info",
+        ],
+        format_func=format_data_type,
+    )
+
+validation_results_keys = storage_client.list_files(
     bucket="processed",
-    prefix="silver/validation_results/season_schedule/",
+    prefix=f"silver/validation_results/{data_type_selection}/",
 )
+validation_results_keys.sort(reverse=True)
+with c5:
+    file_selection = st.selectbox(
+        label="Choose file version",
+        options=validation_results_keys,
+    )
 
-st.write(schedule_validation_result_keys)
+if file_selection is not None:
+    file_key = f"silver/validation_results/{data_type_selection}/{file_selection}"
+
+    validation_results = storage_client.download_dataframe(
+        bucket="processed",
+        key=file_key,
+    )
+
+    st.dataframe(validation_results)
